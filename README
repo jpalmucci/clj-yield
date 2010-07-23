@@ -1,0 +1,31 @@
+Clj-yield provides functionality similar to Python's yield
+statement. For example:
+
+(def *sequence*
+   (with-yielding [out 5]
+      (loop [x 10]
+         (if (pos? x) 
+            (do (yield out x)
+                (recur (dec x)))))))
+
+*sequence* => (10 9 8 7 6 5 4 3 2 1)
+
+With-yielding will create a background thread in which to run its
+body, and return a lazy sequence of the yielded results. You can
+specify how far the producer thread can get ahead of the consumers (5
+above). The yield function will block if the producer gets too far ahead.
+
+If the lazy sequence ever becomes garbage collectable, the yield
+function will throw a java.lang.InterruptedException. The body of the
+with-yielding should return.
+
+I wrote 'yield' for a couple different reasons:
+
+1) I wanted some code to generate a lazy sequence, but it was
+cumbersome to write it using lazy-seq. 'Yield' allows me to write it
+as a simple loop.
+
+2) I wanted to use transient data structures while calculating a lazy
+sequence. Since 'yield' computes its output using a (single) background
+thread, this isn't a problem. (Note: you can still spawn new threads
+inside the body of a with-yielding.)
