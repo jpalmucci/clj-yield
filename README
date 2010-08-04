@@ -10,7 +10,7 @@ statement. For example:
 
 *sequence* => (10 9 8 7 6 5 4 3 2 1)
 
-With-yielding will run its body in a background thread, and return a
+With-yielding will run its body in a background thread and return a
 lazy sequence of the yielded results. You can specify how far the
 producer thread can get ahead of the consumers (5 above). The yield
 function will block if the producer gets too far ahead.
