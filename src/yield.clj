@@ -4,7 +4,7 @@
 ;; ********************************************************************************
 ;; 
 
-(deftype garbage-monitor
+(deftype garbage_monitor
   [obj f]
   Object
   (finalize [this] (f obj))
@@ -13,8 +13,8 @@
 
 (defmacro upon-gc [obj & body]
   "Returns a derefable object that contains 'obj'. The body will run
-'body' when the returned object becomes garbage collectable."
-  `(garbage-monitor.
+when the returned object becomes garbage collectable."
+  `(garbage_monitor.
     ~obj
     (fn [o#]
       ~@body)))
