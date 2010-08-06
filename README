@@ -13,7 +13,8 @@ statement. For example:
 With-yielding will run its body in a background thread and return a
 lazy sequence of the yielded results. You can specify how far the
 producer thread can get ahead of the consumers (5 above). The yield
-function will block if the producer gets too far ahead.
+function will block if the producer gets too far ahead. This allows
+you to make arbitrary non-lazy code operate in a lazy manner.
 
 If the lazy sequence ever becomes garbage collectable, the yield
 function will throw a java.lang.InterruptedException. The body of the
