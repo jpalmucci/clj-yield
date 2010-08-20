@@ -1,5 +1,5 @@
 (ns yield
-  (:use clojure.test))
+  (:use clojure.test iterate))
 
 ;; ********************************************************************************
 ;; 
@@ -71,10 +71,39 @@ Yielding 4
 
   `(with-yielding* ~n
      (bound-fn [~name]
-                 ~@body)))
+               ~@body)
+     (file-position 1)))
 
-(defn with-yielding* [n f]
-  (let [queue (atom (java.util.concurrent.LinkedBlockingQueue. (int n)))
+(def *blockage-map* (atom nil))
+
+(defn make-persistent [map]
+  "remove the atoms from a blockage map"
+  (iterate/iter {for [loc {block :block non-block :non-block}] in map}
+                {assoc {:block @block :non-block @non-block} key loc}))
+
+(defmacro record-blockage [& body]
+  "Record where and how many times a with-yielding seq is blocked
+  because the consumers are not consuming fast enough. Good for
+  detecting bottlenecks"
+  `(let [old# @*blockage-map*]
+     (try
+       (reset! *blockage-map* {})
+       ~@body
+       (make-persistent @*blockage-map*)
+       (finally
+        (reset! *blockage-map* nil)))))
+         
+
+(defn with-yielding* [n f pos]
+  (let [blockage-rec (and @*blockage-map*
+                          (swap! *blockage-map*
+                                 (fn [map]
+                                   (if (contains? map pos)
+                                     map
+                                     (assoc map pos {:block (atom 0) :non-block (atom 0)}))))
+                          (@*blockage-map* pos))
+
+        queue (atom (java.util.concurrent.LinkedBlockingQueue. (int n)))
         ft (future
             (try
              (f queue)
@@ -83,6 +112,10 @@ Yielding 4
                (.offer @queue e 10 java.util.concurrent.TimeUnit/DAYS))
              (finally (.offer @queue *end-marker* 10 java.util.concurrent.TimeUnit/DAYS))))
         get-ele (fn get-ele [guard]
+                  (if blockage-rec
+                    (if (= (.remainingCapacity ^java.util.concurrent.LinkedBlockingQueue @queue) 0)
+                        (swap! (blockage-rec :block) inc)
+                        (swap! (blockage-rec :non-block) inc)))
                   (let [ele (.take ^java.util.concurrent.LinkedBlockingQueue @queue) ]
                     (cond (= ele *end-marker*) ()
 

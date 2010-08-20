@@ -30,3 +30,11 @@ as a simple loop.
 sequence. Since 'yield' computes its output using a (single) background
 thread, this isn't a problem. (Note: you can still spawn new threads
 inside the body of a with-yielding.)
+
+3) I wanted to move a time consuming operation into another
+thread. Lazy sequences acting as buffered queues are great at
+sychronizing producer and consumer threads.
+
+##
+
+TODO: document record-blockage
