@@ -45,7 +45,7 @@ with-yielding should return."
         (throw (java.lang.InterruptedException. "Computing Garbage"))
         (throw e)))))
 
-(defmacro with-yielding [[name n] & body]
+(defmacro with-yielding [[name n & {position :position}] & body]
   "Construct and return a sequence that is filled using 'yield' from
   within the body. The body can get up to 'n' elements ahead of the
   sequence consumer before blocking on 'yield'. For example:
@@ -67,12 +67,17 @@ Yielding 5
 user> (first *test-sequence*)
 Yielding 4
 10
+
+If 'position' is given, use that value to identify this sequence
+for 'record-blockage'.
 "
 
   `(with-yielding* ~n
      (bound-fn [~name]
                ~@body)
-     (file-position 1)))
+     ~(if (nil? position)
+        `(file-position 1)
+        position)))
 
 (def *blockage-map* (atom nil))
 
