@@ -91,7 +91,7 @@ Yielding 4
        ~@body
        (make-persistent @*blockage-map*)
        (finally
-        (reset! *blockage-map* nil)))))
+        (reset! *blockage-map* old#)))))
          
 
 (defn with-yielding* [n f pos]
