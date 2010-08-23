@@ -51,6 +51,21 @@
            (catch Exception e :exception))
          :exception))
 
+  ;; make sure we get an exception if the sequence becomes garbage collectable
+  (is (= (let [got-exception (atom false)]
+           (with-yielding [out 10]
+             (dotimes [x 1000]
+               (try
+                 (yield out x)
+                 (catch java.lang.InterruptedException e
+                   (reset! got-exception true)
+                   (throw e)))))
+           (System/gc)
+           (System/gc)
+           (Thread/sleep 500)
+           @got-exception)
+         true))
+
   (is (= (first (vals (record-blockage
                        (slow-consumer))))
          {:block 5, :non-block 1}))

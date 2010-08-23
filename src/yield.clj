@@ -135,7 +135,7 @@ for 'record-blockage'.
     (let [guard (upon-gc queue
                          (try
                            (let [q @queue]
-                             (swap! queue (fn [x] nil))
+                             (reset! queue nil)
                              (.clear q))
                           (catch Exception e (.printStackTrace e))))]
       (lazy-seq (get-ele guard)))))
