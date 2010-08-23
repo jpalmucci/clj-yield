@@ -73,8 +73,9 @@ for 'record-blockage'.
 "
 
   `(with-yielding* ~n
-     (bound-fn [~name]
-               ~@body)
+     (bound-fn*
+      (^{:once true} fn* [~name]
+       ~@body))
      ~(if (nil? position)
         `(file-position 1)
         position)))
