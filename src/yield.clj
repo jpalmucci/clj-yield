@@ -113,7 +113,7 @@ for 'record-blockage'.
         ft (future
             (try
              (f queue)
-             (catch Exception e
+             (catch Throwable e
                (.offer @queue *exception-marker* 10 java.util.concurrent.TimeUnit/DAYS)
                (.offer @queue e 10 java.util.concurrent.TimeUnit/DAYS))
              (finally (.offer @queue *end-marker* 10 java.util.concurrent.TimeUnit/DAYS))))
