@@ -3,20 +3,6 @@
   (use iterate)
   (use clojure.test))
 
-(defn slow-producer []
-  (iter {for x in (with-yielding [out 1]
-                    (iter {for i from 1 to 5}
-                          (Thread/sleep 500)
-                          (yield out i)))}
-        {collect x}))
-
-(defn slow-consumer []
-  (iter {for x in (with-yielding [out 1]
-                    (iter {for i from 1 to 5}
-                          (yield out i)))}
-        (Thread/sleep 500)
-        {collect x}))
-
 (deftest with-yielding-test
   ;; check that the sequence is correctly generated
   (is (= (apply + (with-yielding [out 10]
@@ -66,13 +52,6 @@
            @got-exception)
          true))
 
-  (is (= (first (vals (record-blockage
-                       (slow-consumer))))
-         {:block 5, :non-block 1}))
-  
-  (is (= (first (vals (record-blockage
-                       (slow-producer))))
-         {:block 0, :non-block 6}))
   )
 
 
