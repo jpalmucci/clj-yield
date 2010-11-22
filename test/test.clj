@@ -40,15 +40,29 @@
   ;; make sure we get an exception if the sequence becomes garbage collectable
   (is (= (let [got-exception (atom false)]
            (with-yielding [out 10]
-             (dotimes [x 1000]
-               (try
-                 (yield out x)
-                 (catch java.lang.InterruptedException e
-                   (reset! got-exception true)
-                   (throw e)))))
+             (try
+               (Thread/sleep 1000)
+               (yield out true)
+               (catch java.lang.InterruptedException e
+                 (reset! got-exception true)
+                 (throw e))))
            (System/gc)
-           (System/gc)
-           (Thread/sleep 500)
+           (Thread/sleep 2000)
+           @got-exception)
+         true))
+
+  ;; make sure we get an exception if we try to yield
+  ;; after with-yielding returns 
+  (is (= (let [got-exception (atom false)
+               s (with-yielding [out 10]
+                   (future 
+                    (try
+                      (Thread/sleep 1000)
+                      (yield out true)
+                      (catch java.lang.InterruptedException e
+                        (reset! got-exception true)
+                        (throw e)))))]
+           (Thread/sleep 2000)
            @got-exception)
          true))
 

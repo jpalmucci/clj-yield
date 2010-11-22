@@ -11,14 +11,6 @@
   clojure.lang.IDeref
   (deref [this] (.obj this)))
 
-(defmacro upon-gc [obj & body]
-  "Returns a derefable object that contains 'obj'. The body will run
-when the returned object becomes garbage collectable."
-  `(garbage_monitor.
-    ~obj
-    (fn [o#]
-      ~@body)))
-
 ;; ********************************************************************************
 
 ;; can't put a nil into a linked blocking queue, so use this object to mark them
@@ -89,50 +81,46 @@ for 'record-blockage'.
         `(file-position 1)
         position)))
 
+
 (defn with-yielding* [n f pos]
-  (let [queue (atom 
-               #_
-               (com.adknife.util.BurstingBlockingQueue. (int n) (int (/ n 2)) false #_ (int n))
-               (java.util.concurrent.ArrayBlockingQueue. (int n) false)
-               #_
-               (java.util.concurrent.SynchronousQueue. false #_ (int n)))
+  (let [queue (java.util.concurrent.ArrayBlockingQueue. (int n) false)
+        queue-atom (atom queue)
         ft (future
             (try
-             (f queue)
-             (catch Throwable e
-               (offer queue (ExceptionContainer. e)))
-             (finally (offer queue *end-marker*))))
+              (f queue-atom)
+              (catch Throwable e
+                (offer queue-atom (ExceptionContainer. e)))
+              (finally (offer queue-atom *end-marker*)
+                       (reset! queue-atom nil))))
         get-ele (fn get-ele [guard]
-                  (let [ele (.take ^java.util.concurrent.BlockingQueue @queue) ]
+                  (let [ele (.take ^java.util.concurrent.BlockingQueue @guard) ]
                     (cond (= ele *end-marker*)
-                          (let [q @queue]
+                          (do
                             ;; make it impossible for lingering
                             ;; threads to push anything else to the
                             ;; queue
-                            (reset! queue nil)
+                            (reset! queue-atom nil)
                             ;; dislodge any lingering threads
-                            (if (not (nil? q))
-                              (.clear q))
-                            ())
-
-                            (= (class ele) ExceptionContainer)
-                            (throw (RuntimeException.
-                                    (.exception ele)))
-
-                            true
-                            (cons (if (= ele *nil-marker*) nil ele)
-                                  (lazy-seq (get-ele guard))))))]
-    (let [guard (upon-gc queue
-                         (try
-                           (let [q @queue]
-                             ;; make it impossible for lingering
-                             ;; threads to push anything else to the
-                             ;; queue
-                             (reset! queue nil)
-                             ;; dislodge any lingering threads
-                             (if (not (nil? q))
-                               (.clear q))
-                             (future-cancel ft))
-                          (catch Exception e (.printStackTrace e))))]
+                            (.clear queue))
+                          
+                          (= (class ele) ExceptionContainer)
+                          (throw (RuntimeException.
+                                  (.exception ele)))
+                          
+                          true
+                          (cons (if (= ele *nil-marker*) nil ele)
+                                (lazy-seq (get-ele guard))))))]
+    (let [guard
+          (garbage_monitor.
+           queue
+           (fn [queue]
+             (try
+               ;; make it impossible for lingering
+               ;; threads to push anything else to the
+               ;; queue
+               (reset! queue-atom nil)
+               ;; dislodge any lingering threads
+               (.clear queue)
+               (future-cancel ft)
+               (catch Exception e (.printStackTrace e)))))]
       (lazy-seq (get-ele guard)))))
-
