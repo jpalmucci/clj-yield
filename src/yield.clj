@@ -39,12 +39,9 @@ with-yielding should return."
         (throw e)))))
 
 (defn yield-exception
-  "Pass the consumer of this yield sequence the exception. Since
-  nothing can be consumed after this exception is thrown, the
-  exception will also be thrown in the current thread, at which point it should exit."
+  "Pass the consumer of this yield sequence the exception."
   [yseq exception]
-  (offer yseq (ExceptionContainer. exception))
-  (throw exception))
+  (offer yseq (ExceptionContainer. exception)))
 
 (defmacro with-yielding [[name n & {position :position}] & body]
   "Construct and return a sequence that is filled using 'yield' from
