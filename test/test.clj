@@ -1,7 +1,5 @@
 (ns test
-  (use yield)
-  (use iterate)
-  (use clojure.test))
+  (:use yield clojure.test))
 
 (deftest with-yielding-test
   ;; check that the sequence is correctly generated

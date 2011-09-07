@@ -1,5 +1,5 @@
 (ns yield
-  (:use clojure.test iterate))
+  (:use clojure.test))
 
 ;; ********************************************************************************
 ;; 
@@ -14,15 +14,15 @@
 ;; ********************************************************************************
 
 ;; can't put a nil into a linked blocking queue, so use this object to mark them
-(defonce *nil-marker* (Object.))
+(defonce +nil-marker+ (Object.))
 ;; marker in the BlockingQueue that signals an exception in the
 ;; generating thread.
 (defrecord ExceptionContainer [exception])
 ;; end of the sequence
-(defonce *end-marker* (Object.))
+(defonce +end-marker+ (Object.))
 
 (defn- offer [queue item]
-  (while (not (.offer ^java.util.concurrent.BlockingQueue @queue (if (nil? item) *nil-marker* item) 10 java.util.concurrent.TimeUnit/SECONDS))))
+  (while (not (.offer ^java.util.concurrent.BlockingQueue @queue (if (nil? item) +nil-marker+ item) 10 java.util.concurrent.TimeUnit/SECONDS))))
 
 (defn yield [yseq x]
   "Append an element to the sequence 'yseq', created with
@@ -82,16 +82,19 @@ for 'record-blockage'.
 (defn with-yielding* [n f pos]
   (let [queue (java.util.concurrent.ArrayBlockingQueue. (int n) false)
         queue-atom (atom queue)
+        out *out*
+        err *err*
         ft (future
-            (try
-              (f queue-atom)
-              (catch Throwable e
-                (offer queue-atom (ExceptionContainer. e)))
-              (finally (offer queue-atom *end-marker*)
-                       (reset! queue-atom nil))))
+             (binding [*out* out *err* err]
+               (try
+                 (f queue-atom)
+                 (catch Throwable e
+                   (offer queue-atom (ExceptionContainer. e)))
+                 (finally (offer queue-atom +end-marker+)
+                          (reset! queue-atom nil)))))
         get-ele (fn get-ele [guard]
                   (let [ele (.take ^java.util.concurrent.BlockingQueue @guard) ]
-                    (cond (= ele *end-marker*)
+                    (cond (= ele +end-marker+)
                           (do
                             ;; make it impossible for lingering
                             ;; threads to push anything else to the
@@ -105,7 +108,7 @@ for 'record-blockage'.
                                   (.exception ele)))
                           
                           true
-                          (cons (if (= ele *nil-marker*) nil ele)
+                          (cons (if (= ele +nil-marker+) nil ele)
                                 (lazy-seq (get-ele guard))))))]
     (let [guard
           (garbage_monitor.
