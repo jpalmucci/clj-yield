@@ -35,6 +35,3 @@ inside the body of a with-yielding.)
 thread. Lazy sequences acting as buffered queues are great at
 sychronizing producer and consumer threads.
 
-##
-
-TODO: document record-blockage

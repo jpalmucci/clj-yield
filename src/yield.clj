@@ -43,7 +43,12 @@ with-yielding should return."
   [yseq exception]
   (offer yseq (ExceptionContainer. exception)))
 
-(defmacro with-yielding [[name n & {position :position}] & body]
+(defn yield-close
+  "Close the yield stream. Any future yields to the stream result in an exception."
+  [yseq]
+  (reset! yseq nil))
+
+(defmacro with-yielding [[name n] & body]
   "Construct and return a sequence that is filled using 'yield' from
   within the body. The body can get up to 'n' elements ahead of the
   sequence consumer before blocking on 'yield'. For example:
@@ -66,20 +71,15 @@ user> (first *test-sequence*)
 Yielding 4
 10
 
-If 'position' is given, use that value to identify this sequence
-for 'record-blockage'.
 "
 
   `(with-yielding* ~n
      (bound-fn*
       (^{:once true} fn* [~name]
-       ~@body))
-     ~(if (nil? position)
-        `(file-position 1)
-        position)))
+       ~@body))))
 
 
-(defn with-yielding* [n f pos]
+(defn with-yielding* [n f]
   (let [queue (java.util.concurrent.ArrayBlockingQueue. (int n) false)
         queue-atom (atom queue)
         out *out*
